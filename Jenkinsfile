@@ -7,11 +7,13 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 script {
-                    echo "Текущая ветка: ${env.GIT_BRANCH}"
-                    git branch: 'dev', url: "${REPO_URL}"
+                    echo "Выполняется загрузка кода из репозитория"
+                    git url: "${REPO_URL}"
+                    echo "Текущая ветка colon ${env.GIT_BRANCH}"
                 }
             }
         }
@@ -31,14 +33,14 @@ pipeline {
         stage('Branch logic') {
             steps {
                 script {
-                    if (env.GIT_BRANCH == 'origin/dev' || env.BRANCH_NAME == 'dev') {
-                        echo "Это dev ветка, тесты прошли успешно"
-                    } else if (env.GIT_BRANCH == 'origin/feature/add-tests' || env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "Это feature ветка, идет разработка"
-                    } else if (env.GIT_BRANCH == 'origin/main' || env.BRANCH_NAME == 'main') {
-                        echo "Это main ветка, готовим деплой"
+                    if (env.BRANCH_NAME == 'dev') {
+                        echo "dev ветка colon тесты прошли успешно можно мержить в main"
+                    } else if (env.BRANCH_NAME == 'feature add tests') {
+                        echo "feature ветка colon идет разработка"
+                    } else if (env.BRANCH_NAME == 'main') {
+                        echo "main ветка colon готовим деплой"
                     } else {
-                        echo "Неизвестная ветка, только тестируем"
+                        echo "другая ветка colon выполняем только тесты"
                     }
                 }
             }
@@ -46,10 +48,7 @@ pipeline {
 
         stage('Deploy') {
             when {
-                anyOf {
-                    environment name: 'BRANCH_NAME', value: 'main'
-                    expression { return env.GIT_BRANCH == 'origin/main' }
-                }
+                branch 'main'
             }
             steps {
                 script {
@@ -60,14 +59,14 @@ pipeline {
                         xcopy /E /Y * "${DEPLOY_DIR}"
                     """
 
-                    echo "Файлы скопированы в папку развертывания"
+                    echo "Файлы успешно скопированы в директорию развертывания"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo 'Все этапы CI CD завершены'
+                echo "CI CD процесс успешно завершен"
             }
         }
     }
