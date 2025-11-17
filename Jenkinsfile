@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https colon slash slash github dot com slash Danil192 slash my ci cd project'
-        DEPLOY_DIR = 'C colon slash deploy slash my app'
+        REPO_URL = 'https://github.com/Danil192/my-ci-cd-project'
+        DEPLOY_DIR = 'C:/deploy/my_app'
     }
 
     stages {
@@ -13,7 +13,7 @@ pipeline {
                 script {
                     echo "Выполняется загрузка кода из репозитория"
                     git url: "${REPO_URL}"
-                    echo "Текущая ветка colon ${env.GIT_BRANCH}"
+                    echo "Текущая ветка: ${env.GIT_BRANCH}"
                 }
             }
         }
@@ -34,13 +34,13 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'dev') {
-                        echo "dev ветка colon тесты прошли успешно можно мержить в main"
-                    } else if (env.BRANCH_NAME == 'feature add tests') {
-                        echo "feature ветка colon идет разработка"
+                        echo "dev ветка, тесты прошли успешно"
+                    } else if (env.BRANCH_NAME == 'feature/add-tests') {
+                        echo "feature ветка, идет разработка"
                     } else if (env.BRANCH_NAME == 'main') {
-                        echo "main ветка colon готовим деплой"
+                        echo "main ветка, готовим деплой"
                     } else {
-                        echo "другая ветка colon выполняем только тесты"
+                        echo "другая ветка, выполняем только тесты"
                     }
                 }
             }
@@ -66,7 +66,7 @@ pipeline {
 
         stage('Build complete') {
             steps {
-                echo "CI CD процесс успешно завершен"
+                echo "CI/CD процесс успешно завершен"
             }
         }
     }
