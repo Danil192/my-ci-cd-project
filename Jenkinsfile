@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/Danil192/my-ci-cd-project'
+        REPO_URL = 'https colon slash slash github dot com slash Danil192 slash my ci cd project'
+        DEPLOY_DIR = 'C colon slash deploy slash my app'
     }
 
     stages {
@@ -31,21 +32,42 @@ pipeline {
             steps {
                 script {
                     if (env.GIT_BRANCH == 'origin/dev' || env.BRANCH_NAME == 'dev') {
-                        echo "Это dev-ветка: тесты успешно прошли, можно мёржить в main."
+                        echo "Это dev ветка, тесты прошли успешно"
                     } else if (env.GIT_BRANCH == 'origin/feature/add-tests' || env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "Это feature-ветка: идёт отладка новых функций."
+                        echo "Это feature ветка, идет разработка"
                     } else if (env.GIT_BRANCH == 'origin/main' || env.BRANCH_NAME == 'main') {
-                        echo "Это main-ветка: стабильная сборка, можно выполнять деплой."
+                        echo "Это main ветка, готовим деплой"
                     } else {
-                        echo "Неизвестная ветка, просто тестируем код."
+                        echo "Неизвестная ветка, только тестируем"
                     }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                anyOf {
+                    environment name: 'BRANCH_NAME', value: 'main'
+                    expression { return env.GIT_BRANCH == 'origin/main' }
+                }
+            }
+            steps {
+                script {
+                    echo "Запуск CD процесса"
+
+                    bat """
+                        if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
+                        xcopy /E /Y * "${DEPLOY_DIR}"
+                    """
+
+                    echo "Файлы скопированы в папку развертывания"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo 'Все этапы пайплайна успешно завершены.'
+                echo 'Все этапы CI CD завершены'
             }
         }
     }
