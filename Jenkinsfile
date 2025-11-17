@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/Danil192/my-ci-cd-project'
         DEPLOY_DIR = 'C:/deploy/my_app'
     }
 
@@ -10,11 +9,8 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                script {
-                    echo "Выполняется загрузка кода из репозитория"
-                    git url: "${REPO_URL}"
-                    echo "Текущая ветка: ${env.GIT_BRANCH}"
-                }
+                echo "Ветка из которой выполняется сборка: ${env.BRANCH_NAME}"
+                echo "Код уже скачан Jenkins автоматически"
             }
         }
 
@@ -34,13 +30,13 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'dev') {
-                        echo "dev ветка, тесты прошли успешно"
+                        echo "dev ветка, тестируем новый код"
                     } else if (env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "feature ветка, идет разработка"
+                        echo "feature ветка, идёт разработка"
                     } else if (env.BRANCH_NAME == 'main') {
                         echo "main ветка, готовим деплой"
                     } else {
-                        echo "другая ветка, выполняем только тесты"
+                        echo "неизвестная ветка, просто тестируем"
                     }
                 }
             }
@@ -52,21 +48,21 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD процесса"
+                    echo "Запуск CD деплоя"
 
                     bat """
                         if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
                         xcopy /E /Y * "${DEPLOY_DIR}"
                     """
 
-                    echo "Файлы успешно скопированы в директорию развертывания"
+                    echo "Деплой выполнен успешно"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo "CI/CD процесс успешно завершен"
+                echo "CI CD процесс завершен"
             }
         }
     }
