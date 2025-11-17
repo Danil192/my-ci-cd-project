@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DEPLOY_DIR = 'C:/deploy/my_app'
+        DEPLOY_DIR = "C:/deploy/my_app"
     }
 
     stages {
