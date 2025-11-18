@@ -3,31 +3,33 @@ pipeline {
 
     environment {
         DEPLOY_DIR = "C:/deploy/my_app"
-        PYTHON = "python"
+        PYTHON = "C:/Users/danil/AppData/Local/Programs/Python/Python312/python.exe"
     }
 
     stages {
 
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
-                echo "Ветка из которой идет сборка: ${env.BRANCH_NAME}"
-                echo "Код был скачан Jenkins автоматически"
+                echo "ветка идет такая извлекаем код: ${env.BRANCH_NAME}"
+                echo "код взят Jenkins автоматически"
             }
         }
 
         stage('Install dependencies') {
             steps {
                 bat """
-                    ${PYTHON} -m pip install --upgrade pip
-                    ${PYTHON} -m pip install -r requirements.txt
+                    "${PYTHON}" -m pip install --upgrade pip
+                    "${PYTHON}" -m pip install -r requirements.txt
                 """
             }
         }
 
         stage('Run tests') {
             steps {
-                echo "Запуск тестов проекта"
-                bat "pytest --maxfail=1 --disable-warnings -q"
+                echo "запуск тестов идем жестко"
+                bat """
+                    "${PYTHON}" -m pytest --maxfail=1 --disable-warnings -q
+                """
             }
         }
 
@@ -35,13 +37,13 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'dev') {
-                        echo "dev ветка, идет активная разработка и тестирование"
+                        echo "ветка dev идет работа"
                     } else if (env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "feature ветка, разработка нового функционала"
+                        echo "ветка feature идет разработка"
                     } else if (env.BRANCH_NAME == 'main') {
-                        echo "main ветка, код готов к боевому деплою"
+                        echo "ветка main готовим релиз"
                     } else {
-                        echo "неизвестная ветка, выполняем только CI проверку"
+                        echo "ветка неизвестна идет стандартная проверка"
                     }
                 }
             }
@@ -53,31 +55,31 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя, подготовка директории"
+                    echo "деплой отключен но код оставляем на месте"
 
                     bat """
                         if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
                         xcopy /E /Y * "${DEPLOY_DIR}"
                     """
 
-                    echo "Деплой завершен успешно"
+                    echo "деплой завершен"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo "CI CD процесс завершен, пайплайн отработал корректно"
+                echo "проект собран пайплайн завершен"
             }
         }
     }
 
     post {
         success {
-            echo "Сборка прошла успешно"
+            echo "сборка успешная саланга красавчик"
         }
         failure {
-            echo "Сборка упала"
+            echo "сборка упала надо чинить"
         }
     }
 }
