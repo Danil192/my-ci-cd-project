@@ -3,26 +3,31 @@ pipeline {
 
     environment {
         DEPLOY_DIR = "C:/deploy/my_app"
+        PYTHON = "python"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                echo "Ветка из которой выполняется сборка: ${env.BRANCH_NAME}"
-                echo "Код уже скачан Jenkins автоматически"
+                echo "Ветка из которой идет сборка: ${env.BRANCH_NAME}"
+                echo "Код был скачан Jenkins автоматически"
             }
         }
 
         stage('Install dependencies') {
             steps {
-                bat 'pip install -r requirements.txt'
+                bat """
+                    ${PYTHON} -m pip install --upgrade pip
+                    ${PYTHON} -m pip install -r requirements.txt
+                """
             }
         }
 
         stage('Run tests') {
             steps {
-                bat 'pytest --maxfail=1 --disable-warnings -q'
+                echo "Запуск тестов проекта"
+                bat "pytest --maxfail=1 --disable-warnings -q"
             }
         }
 
@@ -30,13 +35,13 @@ pipeline {
             steps {
                 script {
                     if (env.BRANCH_NAME == 'dev') {
-                        echo "dev ветка, тестируем новый код"
+                        echo "dev ветка, идет активная разработка и тестирование"
                     } else if (env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "feature ветка, идёт разработка"
+                        echo "feature ветка, разработка нового функционала"
                     } else if (env.BRANCH_NAME == 'main') {
-                        echo "main ветка, готовим деплой"
+                        echo "main ветка, код готов к боевому деплою"
                     } else {
-                        echo "неизвестная ветка, просто тестируем"
+                        echo "неизвестная ветка, выполняем только CI проверку"
                     }
                 }
             }
@@ -48,22 +53,31 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя"
+                    echo "Запуск CD деплоя, подготовка директории"
 
                     bat """
                         if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
                         xcopy /E /Y * "${DEPLOY_DIR}"
                     """
 
-                    echo "Деплой выполнен успешно"
+                    echo "Деплой завершен успешно"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo "CI CD процесс завершен"
+                echo "CI CD процесс завершен, пайплайн отработал корректно"
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Сборка прошла успешно"
+        }
+        failure {
+            echo "Сборка упала"
         }
     }
 }
