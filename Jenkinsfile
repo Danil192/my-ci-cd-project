@@ -69,7 +69,7 @@ pipeline {
             }
         }
 
-        stage('Branch logic') {
+        stage('Branch logic') {   
             steps {
                 script {
                     switch(env.BRANCH_NAME) {
