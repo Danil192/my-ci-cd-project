@@ -14,6 +14,16 @@ pipeline {
             }
         }
 
+        stage('Detect branch') {
+            steps {
+                script {
+                    def branch = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true)
+                    env.BRANCH_NAME = branch
+                    echo "Определенная ветка, ${env.BRANCH_NAME}"
+                }
+            }
+        }
+
         stage('Install dependencies') {
             steps {
                 bat 'pip install -r requirements.txt'
