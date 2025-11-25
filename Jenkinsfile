@@ -7,7 +7,7 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {    
+        stage('Checkout') { 
             steps {
                 echo "Ветка из которой выполняется сборка: ${env.BRANCH_NAME}"
                 echo "Код уже скачан Jenkins автоматически"
