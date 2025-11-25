@@ -23,17 +23,14 @@ pipeline {
             steps {
                 script {
 
-                    // получаем вывод команды целиком
                     def raw = bat(
                         script: 'git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD',
                         returnStdout: true
                     ).trim()
 
-                    // извлекаем последнюю строку
                     def lines = raw.readLines()
                     def ref = lines[-1].trim()
 
-                    // если Jenkins дал detached HEAD
                     if (ref == 'HEAD') {
 
                         def commit = bat(
@@ -77,7 +74,7 @@ pipeline {
                 script {
                     switch(env.BRANCH_NAME) {
                         case 'dev':
-                            echo "dev ветка, тестируем код"
+                            echo "dev ветка, тестируем новый код"
                             break
                         case 'main':
                             echo "main ветка, готовим деплой"
@@ -95,7 +92,8 @@ pipeline {
             }
             steps {
                 script {
-                    echo "запуск CD деплоя, выполняем merge dev в main"
+
+                    echo "запуск CD деплоя, выполняем merge dev в main c авторазруливанием"
 
                     def currentBranch = env.BRANCH_NAME
 
@@ -104,7 +102,7 @@ pipeline {
                         git config user.email "jenkins@ci-cd"
                         git fetch origin main
                         git checkout main
-                        git merge ${currentBranch} -m "merge ${currentBranch} into main, build ${env.BUILD_NUMBER}"
+                        git merge ${currentBranch} -X theirs -m "auto merge ${currentBranch} into main, build ${env.BUILD_NUMBER}"
                         git push origin main
                     """
 
