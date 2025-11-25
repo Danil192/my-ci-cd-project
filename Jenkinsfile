@@ -9,7 +9,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "Код скачан Jenkins автоматически"
+                echo "код скачан Jenkins автоматически"
             }
         }
 
@@ -22,35 +22,40 @@ pipeline {
         stage('Detect branch') {
             steps {
                 script {
-                    // получаем имя remote ветки
-                    def ref = bat(
+
+                    // получаем вывод команды целиком
+                    def raw = bat(
                         script: 'git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD',
                         returnStdout: true
                     ).trim()
 
+                    // извлекаем последнюю строку
+                    def lines = raw.readLines()
+                    def ref = lines[-1].trim()
+
                     // если Jenkins дал detached HEAD
                     if (ref == 'HEAD') {
+
                         def commit = bat(
                             script: 'git rev-parse HEAD',
                             returnStdout: true
                         ).trim()
 
-                        // ищем имя ветки по хэшу
-                        def branches = bat(
-                            script: 'git branch -r --contains ' + commit,
+                        def rawBranches = bat(
+                            script: "git branch -r --contains ${commit}",
                             returnStdout: true
                         ).trim()
 
-                        // первые 1–2 строки обычно origin/dev или origin/main
-                        def realBranch = branches.split("\n")[0].trim()
-                        realBranch = realBranch.replace("origin/", "")
+                        def branchLines = rawBranches.readLines()
+                        def realBranch = branchLines[-1].trim().replace("origin/", "")
 
-                        env.BRANCH_NAME = realBranch
+                        env.BRANCH_NAME = realBranch.trim()
+
                     } else {
-                        env.BRANCH_NAME = ref
+                        env.BRANCH_NAME = ref.trim()
                     }
 
-                    echo "Определенная ветка, ${env.BRANCH_NAME}"
+                    echo "определенная ветка: ${env.BRANCH_NAME}"
                 }
             }
         }
@@ -72,10 +77,7 @@ pipeline {
                 script {
                     switch(env.BRANCH_NAME) {
                         case 'dev':
-                            echo "dev ветка, тестируем новый код"
-                            break
-                        case 'feature/add-tests':
-                            echo "feature ветка, идёт разработка"
+                            echo "dev ветка, тестируем код"
                             break
                         case 'main':
                             echo "main ветка, готовим деплой"
@@ -93,7 +95,7 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя, слияние dev → main"
+                    echo "запуск CD деплоя, выполняем merge dev в main"
 
                     def currentBranch = env.BRANCH_NAME
 
@@ -102,18 +104,18 @@ pipeline {
                         git config user.email "jenkins@ci-cd"
                         git fetch origin main
                         git checkout main
-                        git merge ${currentBranch} -m "Auto-merge ${currentBranch} into main [Build #${env.BUILD_NUMBER}]"
+                        git merge ${currentBranch} -m "merge ${currentBranch} into main, build ${env.BUILD_NUMBER}"
                         git push origin main
                     """
 
-                    echo "Деплой выполнен успешно"
+                    echo "деплой завершен успешно"
                 }
             }
         }
 
         stage('Build complete') {
             steps {
-                echo "CI CD процесс завершён"
+                echo "CI CD процесс завершен"
             }
         }
     }
