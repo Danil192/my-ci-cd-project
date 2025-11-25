@@ -20,46 +20,33 @@ pipeline {
                     @echo off
                     chcp 65001 >nul
                     
-                    REM Поиск Python 3
-                    set PYTHON_CMD=
-                    
                     REM Попытка 1: python3
                     python3 --version >nul 2>&1
-                    if %errorlevel% == 0 (
-                        set PYTHON_CMD=python3
-                        goto :found
+                    if %errorlevel% equ 0 (
+                        echo Используется Python: python3
+                        python3 -m pip install --upgrade pip
+                        if %errorlevel% neq 0 exit /b 1
+                        python3 -m pip install -r requirements.txt
+                        if %errorlevel% neq 0 exit /b 1
+                        exit /b 0
                     )
                     
-                    REM Попытка 2: python с проверкой версии
+                    REM Попытка 2: python (проверяем версию)
                     python --version >nul 2>&1
-                    if %errorlevel% == 0 (
-                        for /f "tokens=2" %%i in ('python --version 2^>nul') do (
-                            echo %%i | findstr /R "^3\\." >nul
-                            if %errorlevel% == 0 (
-                                set PYTHON_CMD=python
-                                goto :found
-                            )
-                        )
-                    )
-                    
-                    REM Попытка 3: поиск через where
-                    for /f "delims=" %%i in ('where python 2^>nul') do (
-                        "%%i" --version 2>nul | findstr /R "^Python 3\\." >nul
-                        if %errorlevel% == 0 (
-                            set PYTHON_CMD=%%i
-                            goto :found
+                    if %errorlevel% equ 0 (
+                        python --version | findstr /R "^Python 3\\." >nul
+                        if %errorlevel% equ 0 (
+                            echo Используется Python: python
+                            python -m pip install --upgrade pip
+                            if %errorlevel% neq 0 exit /b 1
+                            python -m pip install -r requirements.txt
+                            if %errorlevel% neq 0 exit /b 1
+                            exit /b 0
                         )
                     )
                     
                     echo Ошибка: Python 3 не найден! Установите Python 3 и добавьте его в PATH
                     exit /b 1
-                    
-                    :found
-                    echo Используется Python: %PYTHON_CMD%
-                    %PYTHON_CMD% -m pip install --upgrade pip
-                    if errorlevel 1 exit /b 1
-                    %PYTHON_CMD% -m pip install -r requirements.txt
-                    if errorlevel 1 exit /b 1
                 """
             }
         }
@@ -69,30 +56,20 @@ pipeline {
                 echo "запуск тестов идем жестко"
                 bat """
                     @echo off
-                    REM Поиск Python 3
-                    set PYTHON_CMD=
                     
+                    REM Попытка 1: python3
                     python3 --version >nul 2>&1
-                    if %errorlevel% == 0 (
+                    if %errorlevel% equ 0 (
                         python3 -m pytest --maxfail=1 --disable-warnings -q
                         exit /b %errorlevel%
                     )
                     
+                    REM Попытка 2: python (проверяем версию)
                     python --version >nul 2>&1
-                    if %errorlevel% == 0 (
-                        for /f "tokens=2" %%i in ('python --version 2^>nul') do (
-                            echo %%i | findstr /R "^3\\." >nul
-                            if %errorlevel% == 0 (
-                                python -m pytest --maxfail=1 --disable-warnings -q
-                                exit /b %errorlevel%
-                            )
-                        )
-                    )
-                    
-                    for /f "delims=" %%i in ('where python 2^>nul') do (
-                        "%%i" --version 2>nul | findstr /R "^Python 3\\." >nul
-                        if %errorlevel% == 0 (
-                            "%%i" -m pytest --maxfail=1 --disable-warnings -q
+                    if %errorlevel% equ 0 (
+                        python --version | findstr /R "^Python 3\\." >nul
+                        if %errorlevel% equ 0 (
+                            python -m pytest --maxfail=1 --disable-warnings -q
                             exit /b %errorlevel%
                         )
                     )
