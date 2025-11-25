@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DEPLOY_DIR = "C:/deploy/my_app"
-        PYTHON = "C:/Users/danil/AppData/Local/Programs/Python/Python312/python.exe"
     }
 
     stages {
@@ -18,9 +17,42 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 bat """
+                    @echo off
                     chcp 65001 >nul
-                    "${PYTHON}" -m pip install --upgrade pip
-                    "${PYTHON}" -m pip install -r requirements.txt
+                    
+                    REM Попытка использовать py (Python Launcher для Windows)
+                    py --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        set PYTHON_CMD=py
+                        goto :found
+                    )
+                    
+                    REM Попытка использовать python из PATH
+                    python --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        set PYTHON_CMD=python
+                        goto :found
+                    )
+                    
+                    REM Поиск Python через where
+                    for /f "tokens=*" %%i in ('where py 2^>nul') do (
+                        set PYTHON_CMD=py
+                        goto :found
+                    )
+                    
+                    for /f "tokens=*" %%i in ('where python 2^>nul') do (
+                        set PYTHON_CMD=python
+                        goto :found
+                    )
+                    
+                    echo Ошибка: Python не найден! Установите Python и добавьте его в PATH
+                    exit /b 1
+                    
+                    :found
+                    echo Используется Python команда: %PYTHON_CMD%
+                    %PYTHON_CMD% -m pip install --upgrade pip
+                    if errorlevel 1 exit /b 1
+                    %PYTHON_CMD% -m pip install -r requirements.txt
                     if errorlevel 1 exit /b 1
                 """
             }
@@ -30,7 +62,23 @@ pipeline {
             steps {
                 echo "запуск тестов идем жестко"
                 bat """
-                    "${PYTHON}" -m pytest --maxfail=1 --disable-warnings -q
+                    @echo off
+                    REM Попытка использовать py (Python Launcher для Windows)
+                    py --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        py -m pytest --maxfail=1 --disable-warnings -q
+                        exit /b %errorlevel%
+                    )
+                    
+                    REM Попытка использовать python из PATH
+                    python --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        python -m pytest --maxfail=1 --disable-warnings -q
+                        exit /b %errorlevel%
+                    )
+                    
+                    echo Ошибка: Python не найден для запуска тестов
+                    exit /b 1
                 """
             }
         }
