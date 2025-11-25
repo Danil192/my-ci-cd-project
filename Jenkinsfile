@@ -17,9 +17,49 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 bat """
+                    @echo off
                     chcp 65001 >nul
-                    py -3 -m pip install --upgrade pip
-                    py -3 -m pip install -r requirements.txt
+                    
+                    REM Поиск Python 3
+                    set PYTHON_CMD=
+                    
+                    REM Попытка 1: python3
+                    python3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        set PYTHON_CMD=python3
+                        goto :found
+                    )
+                    
+                    REM Попытка 2: python с проверкой версии
+                    python --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        for /f "tokens=2" %%i in ('python --version 2^>nul') do (
+                            echo %%i | findstr /R "^3\\." >nul
+                            if %errorlevel% == 0 (
+                                set PYTHON_CMD=python
+                                goto :found
+                            )
+                        )
+                    )
+                    
+                    REM Попытка 3: поиск через where
+                    for /f "delims=" %%i in ('where python 2^>nul') do (
+                        "%%i" --version 2>nul | findstr /R "^Python 3\\." >nul
+                        if %errorlevel% == 0 (
+                            set PYTHON_CMD=%%i
+                            goto :found
+                        )
+                    )
+                    
+                    echo Ошибка: Python 3 не найден! Установите Python 3 и добавьте его в PATH
+                    exit /b 1
+                    
+                    :found
+                    echo Используется Python: %PYTHON_CMD%
+                    %PYTHON_CMD% -m pip install --upgrade pip
+                    if errorlevel 1 exit /b 1
+                    %PYTHON_CMD% -m pip install -r requirements.txt
+                    if errorlevel 1 exit /b 1
                 """
             }
         }
@@ -28,7 +68,37 @@ pipeline {
             steps {
                 echo "запуск тестов идем жестко"
                 bat """
-                    py -3 -m pytest --maxfail=1 --disable-warnings -q
+                    @echo off
+                    REM Поиск Python 3
+                    set PYTHON_CMD=
+                    
+                    python3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        python3 -m pytest --maxfail=1 --disable-warnings -q
+                        exit /b %errorlevel%
+                    )
+                    
+                    python --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        for /f "tokens=2" %%i in ('python --version 2^>nul') do (
+                            echo %%i | findstr /R "^3\\." >nul
+                            if %errorlevel% == 0 (
+                                python -m pytest --maxfail=1 --disable-warnings -q
+                                exit /b %errorlevel%
+                            )
+                        )
+                    )
+                    
+                    for /f "delims=" %%i in ('where python 2^>nul') do (
+                        "%%i" --version 2>nul | findstr /R "^Python 3\\." >nul
+                        if %errorlevel% == 0 (
+                            "%%i" -m pytest --maxfail=1 --disable-warnings -q
+                            exit /b %errorlevel%
+                        )
+                    )
+                    
+                    echo Ошибка: Python 3 не найден для запуска тестов
+                    exit /b 1
                 """
             }
         }
