@@ -17,9 +17,9 @@ pipeline {
         stage('Detect branch') {
             steps {
                 script {
-                    def branch = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true)
+                    def branch = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     env.BRANCH_NAME = branch
-                    echo "Определенная ветка, ${env.BRANCH_NAME}"
+                    echo "Определенная ветка: ${env.BRANCH_NAME}"
                 }
             }
         }
@@ -54,14 +54,14 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'main'
+                expression { env.BRANCH_NAME == 'main' }
             }
             steps {
                 script {
                     echo "Запуск CD деплоя - merge в ветку main"
-                    
-                    def currentBranch = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'main'
-                    
+
+                    def currentBranch = env.BRANCH_NAME
+
                     bat """
                         git config user.name "Jenkins"
                         git config user.email "jenkins@ci-cd"
@@ -71,7 +71,7 @@ pipeline {
                         git push origin main
                     """
 
-                    echo "Деплой выполнен успешно - изменения отправлены в main"
+                    echo "Деплой выполнен успешно"
                 }
             }
         }
