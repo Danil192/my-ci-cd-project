@@ -17,36 +17,9 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 bat """
-                    @echo off
                     chcp 65001 >nul
-                    
-                    REM Попытка 1: python3
-                    python3 --version >nul 2>&1
-                    if %errorlevel% equ 0 (
-                        echo Используется Python: python3
-                        python3 -m pip install --upgrade pip
-                        if %errorlevel% neq 0 exit /b 1
-                        python3 -m pip install -r requirements.txt
-                        if %errorlevel% neq 0 exit /b 1
-                        exit /b 0
-                    )
-                    
-                    REM Попытка 2: python (проверяем версию)
-                    python --version >nul 2>&1
-                    if %errorlevel% equ 0 (
-                        python --version | findstr /R "^Python 3\\." >nul
-                        if %errorlevel% equ 0 (
-                            echo Используется Python: python
-                            python -m pip install --upgrade pip
-                            if %errorlevel% neq 0 exit /b 1
-                            python -m pip install -r requirements.txt
-                            if %errorlevel% neq 0 exit /b 1
-                            exit /b 0
-                        )
-                    )
-                    
-                    echo Ошибка: Python 3 не найден! Установите Python 3 и добавьте его в PATH
-                    exit /b 1
+                    py -m pip install --upgrade pip
+                    py -m pip install -r requirements.txt
                 """
             }
         }
@@ -55,27 +28,7 @@ pipeline {
             steps {
                 echo "запуск тестов идем жестко"
                 bat """
-                    @echo off
-                    
-                    REM Попытка 1: python3
-                    python3 --version >nul 2>&1
-                    if %errorlevel% equ 0 (
-                        python3 -m pytest --maxfail=1 --disable-warnings -q
-                        exit /b %errorlevel%
-                    )
-                    
-                    REM Попытка 2: python (проверяем версию)
-                    python --version >nul 2>&1
-                    if %errorlevel% equ 0 (
-                        python --version | findstr /R "^Python 3\\." >nul
-                        if %errorlevel% equ 0 (
-                            python -m pytest --maxfail=1 --disable-warnings -q
-                            exit /b %errorlevel%
-                        )
-                    )
-                    
-                    echo Ошибка: Python 3 не найден для запуска тестов
-                    exit /b 1
+                    py -m pytest --maxfail=1 --disable-warnings -q
                 """
             }
         }
