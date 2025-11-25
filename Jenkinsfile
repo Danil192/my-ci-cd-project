@@ -13,6 +13,12 @@ pipeline {
             }
         }
 
+        stage('Fix checkout') {
+            steps {
+                bat "git checkout dev"
+            }
+        }
+
         stage('Detect branch') {
             steps {
                 script {
