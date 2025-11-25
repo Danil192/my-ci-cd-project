@@ -20,32 +20,46 @@ pipeline {
                     @echo off
                     chcp 65001 >nul
                     
+                    REM Попытка использовать py -3 (Python 3 через Launcher)
+                    py -3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        set PYTHON_CMD=py -3
+                        goto :found
+                    )
+                    
+                    REM Попытка использовать python3 из PATH
+                    python3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        set PYTHON_CMD=python3
+                        goto :found
+                    )
+                    
                     REM Попытка использовать py (Python Launcher для Windows)
                     py --version >nul 2>&1
                     if %errorlevel% == 0 (
-                        set PYTHON_CMD=py
-                        goto :found
+                        REM Проверяем версию Python
+                        for /f "tokens=2" %%i in ('py --version 2^>nul') do (
+                            echo %%i | findstr /R "^3\\." >nul
+                            if %errorlevel% == 0 (
+                                set PYTHON_CMD=py
+                                goto :found
+                            )
+                        )
                     )
                     
-                    REM Попытка использовать python из PATH
+                    REM Попытка использовать python из PATH (только если версия 3.x)
                     python --version >nul 2>&1
                     if %errorlevel% == 0 (
-                        set PYTHON_CMD=python
-                        goto :found
+                        for /f "tokens=2" %%i in ('python --version 2^>nul') do (
+                            echo %%i | findstr /R "^3\\." >nul
+                            if %errorlevel% == 0 (
+                                set PYTHON_CMD=python
+                                goto :found
+                            )
+                        )
                     )
                     
-                    REM Поиск Python через where
-                    for /f "tokens=*" %%i in ('where py 2^>nul') do (
-                        set PYTHON_CMD=py
-                        goto :found
-                    )
-                    
-                    for /f "tokens=*" %%i in ('where python 2^>nul') do (
-                        set PYTHON_CMD=python
-                        goto :found
-                    )
-                    
-                    echo Ошибка: Python не найден! Установите Python и добавьте его в PATH
+                    echo Ошибка: Python 3 не найден! Установите Python 3 и добавьте его в PATH
                     exit /b 1
                     
                     :found
@@ -63,21 +77,33 @@ pipeline {
                 echo "запуск тестов идем жестко"
                 bat """
                     @echo off
-                    REM Попытка использовать py (Python Launcher для Windows)
+                    REM Попытка использовать py -3 (Python 3 через Launcher)
+                    py -3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        py -3 -m pytest --maxfail=1 --disable-warnings -q
+                        exit /b %errorlevel%
+                    )
+                    
+                    REM Попытка использовать python3 из PATH
+                    python3 --version >nul 2>&1
+                    if %errorlevel% == 0 (
+                        python3 -m pytest --maxfail=1 --disable-warnings -q
+                        exit /b %errorlevel%
+                    )
+                    
+                    REM Попытка использовать py (проверяем версию)
                     py --version >nul 2>&1
                     if %errorlevel% == 0 (
-                        py -m pytest --maxfail=1 --disable-warnings -q
-                        exit /b %errorlevel%
+                        for /f "tokens=2" %%i in ('py --version 2^>nul') do (
+                            echo %%i | findstr /R "^3\\." >nul
+                            if %errorlevel% == 0 (
+                                py -m pytest --maxfail=1 --disable-warnings -q
+                                exit /b %errorlevel%
+                            )
+                        )
                     )
                     
-                    REM Попытка использовать python из PATH
-                    python --version >nul 2>&1
-                    if %errorlevel% == 0 (
-                        python -m pytest --maxfail=1 --disable-warnings -q
-                        exit /b %errorlevel%
-                    )
-                    
-                    echo Ошибка: Python не найден для запуска тестов
+                    echo Ошибка: Python 3 не найден для запуска тестов
                     exit /b 1
                 """
             }
@@ -100,33 +126,39 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                anyOf {
-                    branch "dev"
-                    branch "main"
-                }
-            }
             steps {
                 script {
-                    echo "деплой отключен но код оставляем на месте"
+                    // Определяем имя ветки из переменных окружения Jenkins
+                    def branchName = env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'unknown'
+                    // Убираем префикс origin/ если есть
+                    branchName = branchName.replaceAll('origin/', '')
+                    
+                    echo "Текущая ветка: ${branchName}"
+                    
+                    // Выполняем деплой только для веток dev и main
+                    if (branchName == 'dev' || branchName == 'main') {
+                        echo "деплой отключен но код оставляем на месте"
 
-                    bat """
-                        if not exist "${DEPLOY_DIR}" (
-                            mkdir "${DEPLOY_DIR}"
-                        )
-                        if not exist "${DEPLOY_DIR}" (
-                            echo Ошибка: не удалось создать папку "${DEPLOY_DIR}"
-                            exit /b 1
-                        )
-                        xcopy /E /I /Y * "${DEPLOY_DIR}\\"
-                        if errorlevel 1 (
-                            echo Ошибка при копировании файлов
-                            exit /b 1
-                        )
-                        echo Файлы успешно скопированы в "${DEPLOY_DIR}"
-                    """
+                        bat """
+                            if not exist "${DEPLOY_DIR}" (
+                                mkdir "${DEPLOY_DIR}"
+                            )
+                            if not exist "${DEPLOY_DIR}" (
+                                echo Ошибка: не удалось создать папку "${DEPLOY_DIR}"
+                                exit /b 1
+                            )
+                            xcopy /E /I /Y * "${DEPLOY_DIR}\\"
+                            if errorlevel 1 (
+                                echo Ошибка при копировании файлов
+                                exit /b 1
+                            )
+                            echo Файлы успешно скопированы в "${DEPLOY_DIR}"
+                        """
 
-                    echo "деплой завершен"
+                        echo "деплой завершен"
+                    } else {
+                        echo "Деплой пропущен для ветки: ${branchName} (выполняется только для dev и main)"
+                    }
                 }
             }
         }
@@ -147,3 +179,4 @@ pipeline {
         }
     }
 }
+
