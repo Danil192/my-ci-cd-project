@@ -93,16 +93,18 @@ pipeline {
             steps {
                 script {
 
-                    echo "запуск CD деплоя, выполняем merge dev в main c авторазруливанием"
-
-                    def currentBranch = env.BRANCH_NAME
+                    echo "запуск CD деплоя, выполняем очистку и пересоздание main"
 
                     bat """
                         git config user.name "Jenkins"
                         git config user.email "jenkins@ci-cd"
-                        git fetch origin main
-                        git checkout main
-                        git merge ${currentBranch} -X theirs -m "auto merge ${currentBranch} into main, build ${env.BUILD_NUMBER}"
+
+                        git fetch origin
+
+                        git checkout -B main origin/main
+
+                        git merge dev -X theirs -m "auto merge dev into main, build ${env.BUILD_NUMBER}"
+
                         git push origin main
                     """
 
@@ -110,6 +112,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Build complete') {
             steps {
