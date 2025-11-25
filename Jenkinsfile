@@ -83,11 +83,11 @@ pipeline {
 
         stage('Deploy') {
             when {
-                expression { env.BRANCH_NAME == 'main' }
+                expression { env.BRANCH_NAME == 'dev' }
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя, слияние в main"
+                    echo "Запуск CD деплоя, слияние dev → main"
 
                     def currentBranch = env.BRANCH_NAME
 
@@ -96,7 +96,7 @@ pipeline {
                         git config user.email "jenkins@ci-cd"
                         git fetch origin main
                         git checkout main
-                        git merge ${currentBranch} -m "Merge ${currentBranch} into main [Build #${env.BUILD_NUMBER}]"
+                        git merge ${currentBranch} -m "Auto-merge ${currentBranch} into main [Build #${env.BUILD_NUMBER}]"
                         git push origin main
                     """
 
