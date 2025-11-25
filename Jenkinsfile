@@ -7,19 +7,44 @@ pipeline {
 
     stages {
 
-        stage('Checkout') { 
+        stage('Checkout') {
             steps {
-                echo "Ветка из которой выполняется сборка: ${env.BRANCH_NAME}"
-                echo "Код уже скачан Jenkins автоматически"
+                echo "Код скачан Jenkins автоматически"
             }
         }
 
         stage('Detect branch') {
             steps {
                 script {
-                    def branch = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    env.BRANCH_NAME = branch
-                    echo "Определенная ветка: ${env.BRANCH_NAME}"
+                    // получаем имя remote ветки
+                    def ref = bat(
+                        script: 'git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    // если Jenkins дал detached HEAD
+                    if (ref == 'HEAD') {
+                        def commit = bat(
+                            script: 'git rev-parse HEAD',
+                            returnStdout: true
+                        ).trim()
+
+                        // ищем имя ветки по хэшу
+                        def branches = bat(
+                            script: 'git branch -r --contains ' + commit,
+                            returnStdout: true
+                        ).trim()
+
+                        // первые 1–2 строки обычно origin/dev или origin/main
+                        def realBranch = branches.split("\n")[0].trim()
+                        realBranch = realBranch.replace("origin/", "")
+
+                        env.BRANCH_NAME = realBranch
+                    } else {
+                        env.BRANCH_NAME = ref
+                    }
+
+                    echo "Определенная ветка, ${env.BRANCH_NAME}"
                 }
             }
         }
@@ -39,14 +64,18 @@ pipeline {
         stage('Branch logic') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'dev') {
-                        echo "dev ветка, тестируем новый код"
-                    } else if (env.BRANCH_NAME == 'feature/add-tests') {
-                        echo "feature ветка, идёт разработка"
-                    } else if (env.BRANCH_NAME == 'main') {
-                        echo "main ветка, готовим деплой"
-                    } else {
-                        echo "неизвестная ветка, просто тестируем"
+                    switch(env.BRANCH_NAME) {
+                        case 'dev':
+                            echo "dev ветка, тестируем новый код"
+                            break
+                        case 'feature/add-tests':
+                            echo "feature ветка, идёт разработка"
+                            break
+                        case 'main':
+                            echo "main ветка, готовим деплой"
+                            break
+                        default:
+                            echo "неизвестная ветка, просто тестируем"
                     }
                 }
             }
@@ -58,7 +87,7 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя - merge в ветку main"
+                    echo "Запуск CD деплоя, слияние в main"
 
                     def currentBranch = env.BRANCH_NAME
 
@@ -78,7 +107,7 @@ pipeline {
 
         stage('Build complete') {
             steps {
-                echo "CI CD процесс завершен"
+                echo "CI CD процесс завершён"
             }
         }
     }
