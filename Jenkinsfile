@@ -48,14 +48,20 @@ pipeline {
             }
             steps {
                 script {
-                    echo "Запуск CD деплоя"
-
+                    echo "Запуск CD деплоя - merge в ветку main"
+                    
+                    def currentBranch = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'main'
+                    
                     bat """
-                        if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
-                        xcopy /E /Y * "${DEPLOY_DIR}"
+                        git config user.name "Jenkins"
+                        git config user.email "jenkins@ci-cd"
+                        git fetch origin main
+                        git checkout main
+                        git merge ${currentBranch} -m "Merge ${currentBranch} into main [Build #${env.BUILD_NUMBER}]"
+                        git push origin main
                     """
 
-                    echo "Деплой выполнен успешно"
+                    echo "Деплой выполнен успешно - изменения отправлены в main"
                 }
             }
         }
