@@ -18,8 +18,10 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 bat """
+                    chcp 65001 >nul
                     "${PYTHON}" -m pip install --upgrade pip
                     "${PYTHON}" -m pip install -r requirements.txt
+                    if errorlevel 1 exit /b 1
                 """
             }
         }
@@ -51,15 +53,29 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch "dev"
+                anyOf {
+                    branch "dev"
+                    branch "main"
+                }
             }
             steps {
                 script {
                     echo "деплой отключен но код оставляем на месте"
 
                     bat """
-                        if not exist "${DEPLOY_DIR}" mkdir "${DEPLOY_DIR}"
-                        xcopy /E /Y * "${DEPLOY_DIR}"
+                        if not exist "${DEPLOY_DIR}" (
+                            mkdir "${DEPLOY_DIR}"
+                        )
+                        if not exist "${DEPLOY_DIR}" (
+                            echo Ошибка: не удалось создать папку "${DEPLOY_DIR}"
+                            exit /b 1
+                        )
+                        xcopy /E /I /Y * "${DEPLOY_DIR}\\"
+                        if errorlevel 1 (
+                            echo Ошибка при копировании файлов
+                            exit /b 1
+                        )
+                        echo Файлы успешно скопированы в "${DEPLOY_DIR}"
                     """
 
                     echo "деплой завершен"
