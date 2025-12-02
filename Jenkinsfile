@@ -53,7 +53,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to disk') {
+stage('Deploy to disk') {
     when {
         branch 'dev'
     }
@@ -62,17 +62,15 @@ pipeline {
             echo "Запуск CD: развёртывание на локальный диск C:"
 
             bat """
-                :: Удаляем содержимое, если папка существует
                 if exist "C:\\deploy\\my_app" (
                     rmdir /s /q "C:\\deploy\\my_app"
                 )
-
-                :: Создаём папки по уровням (Windows-совместимо)
                 if not exist "C:\\deploy" mkdir "C:\\deploy"
                 mkdir "C:\\deploy\\my_app"
 
-                :: Копируем файлы, исключая .git
                 robocopy . "C:\\deploy\\my_app" /E /XD .git >nul
+                if %errorlevel% leq 1 exit 0
+                exit %errorlevel%
             """
 
             echo "Развёртывание завершено: приложение доступно в C:/deploy/my_app"
