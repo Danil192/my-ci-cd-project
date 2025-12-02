@@ -62,11 +62,17 @@ pipeline {
             echo "Запуск CD: развёртывание на локальный диск C:"
 
             bat """
+                :: Удаляем содержимое, если папка существует
                 if exist "C:\\deploy\\my_app" (
                     rmdir /s /q "C:\\deploy\\my_app"
                 )
-                mkdir /p "C:\\deploy\\my_app"
-                robocopy . "C:\\deploy\\my_app" /E /XD .git
+
+                :: Создаём папки по уровням (Windows-совместимо)
+                if not exist "C:\\deploy" mkdir "C:\\deploy"
+                mkdir "C:\\deploy\\my_app"
+
+                :: Копируем файлы, исключая .git
+                robocopy . "C:\\deploy\\my_app" /E /XD .git >nul
             """
 
             echo "Развёртывание завершено: приложение доступно в C:/deploy/my_app"
