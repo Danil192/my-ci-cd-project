@@ -9,50 +9,17 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "код скачан Jenkins автоматически"
-            }
-        }
-
-        stage('Fix checkout') {  
-            steps {
-                bat "git checkout dev"
+                // Jenkins уже автоматически делает checkout нужной ветки
+                echo "Код успешно загружен из репозитория"
             }
         }
 
         stage('Detect branch') {
             steps {
                 script {
-
-                    def raw = bat(
-                        script: 'git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-
-                    def lines = raw.readLines()
-                    def ref = lines[-1].trim()
-
-                    if (ref == 'HEAD') {
-
-                        def commit = bat(
-                            script: 'git rev-parse HEAD',
-                            returnStdout: true
-                        ).trim()
-
-                        def rawBranches = bat(
-                            script: "git branch -r --contains ${commit}",
-                            returnStdout: true
-                        ).trim()
-
-                        def branchLines = rawBranches.readLines()
-                        def realBranch = branchLines[-1].trim().replace("origin/", "")
-
-                        env.BRANCH_NAME = realBranch.trim()
-
-                    } else {
-                        env.BRANCH_NAME = ref.trim()
-                    }
-
-                    echo "определенная ветка: ${env.BRANCH_NAME}"
+                    // Jenkins устанавливает GIT_BRANCH как, например, 'origin/dev'
+                    env.BRANCH_NAME = env.GIT_BRANCH?.replace('origin/', '') ?: 'UNKNOWN'
+                    echo "Определённая ветка: ${env.BRANCH_NAME}"
                 }
             }
         }
@@ -69,54 +36,60 @@ pipeline {
             }
         }
 
-        stage('Branch logic') {   
+        stage('Branch logic') {
             steps {
                 script {
                     switch(env.BRANCH_NAME) {
                         case 'dev':
-                            echo "dev ветка, тестируем новый код"
+                            echo "Ветка dev: тестируем и готовим к развёртыванию"
                             break
                         case 'main':
-                            echo "main ветка, готовим деплой"
+                            echo "Ветка main: стабильная версия"
                             break
                         default:
-                            echo "неизвестная ветка, просто тестируем"
+                            echo "Неизвестная ветка: только тестирование"
                     }
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to disk') {
             when {
-                expression { env.BRANCH_NAME == 'dev' }
+                branch 'dev'  // автоматически обрезает 'origin/'
             }
             steps {
                 script {
+                    echo "Запуск CD: развёртывание на локальный диск C:"
 
-                    echo "запуск CD деплоя, выполняем очистку и пересоздание main"
-
+                    // Удаляем старую версию
                     bat """
-                        git config user.name "Jenkins"
-                        git config user.email "jenkins@ci-cd"
-
-                        git fetch origin
-
-                        git checkout -B main origin/main
-
-                        git merge dev -X theirs -m "auto merge dev into main, build ${env.BUILD_NUMBER}"
-
-                        git push origin main
+                        if exist "${env.DEPLOY_DIR}" (
+                            rmdir /s /q "${env.DEPLOY_DIR}"
+                        )
                     """
 
-                    echo "деплой завершен успешно"
+                    // Создаём папку заново
+                    bat "mkdir ${env.DEPLOY_DIR}"
+
+                    // Копируем всё содержимое рабочей директории (кроме .git)
+                    bat """
+                        xcopy . "${env.DEPLOY_DIR}" /E /I /EXCLUDE:.gitignore
+                    """
+
+                    // Альтернатива (если xcopy не справляется с .git):
+                    // Можно явно исключить .git:
+                    bat """
+                        robocopy . "${env.DEPLOY_DIR}" /E /XD .git
+                    """
+
+                    echo "Развёртывание завершено: приложение доступно в ${env.DEPLOY_DIR}"
                 }
             }
         }
 
-
         stage('Build complete') {
             steps {
-                echo "CI CD процесс завершен"
+                echo "CI/CD процесс успешно завершён"
             }
         }
     }
