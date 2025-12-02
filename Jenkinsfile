@@ -54,38 +54,25 @@ pipeline {
         }
 
         stage('Deploy to disk') {
-            when {
-                branch 'dev'  // автоматически обрезает 'origin/'
-            }
-            steps {
-                script {
-                    echo "Запуск CD: развёртывание на локальный диск C:"
+    when {
+        branch 'dev'
+    }
+    steps {
+        script {
+            echo "Запуск CD: развёртывание на локальный диск C:"
 
-                    // Удаляем старую версию
-                    bat """
-                        if exist "${env.DEPLOY_DIR}" (
-                            rmdir /s /q "${env.DEPLOY_DIR}"
-                        )
-                    """
+            bat """
+                if exist "C:\\deploy\\my_app" (
+                    rmdir /s /q "C:\\deploy\\my_app"
+                )
+                mkdir /p "C:\\deploy\\my_app"
+                robocopy . "C:\\deploy\\my_app" /E /XD .git
+            """
 
-                    // Создаём папку заново
-                    bat "mkdir ${env.DEPLOY_DIR}"
-
-                    // Копируем всё содержимое рабочей директории (кроме .git)
-                    bat """
-                        xcopy . "${env.DEPLOY_DIR}" /E /I /EXCLUDE:.gitignore
-                    """
-
-                    // Альтернатива (если xcopy не справляется с .git):
-                    // Можно явно исключить .git:
-                    bat """
-                        robocopy . "${env.DEPLOY_DIR}" /E /XD .git
-                    """
-
-                    echo "Развёртывание завершено: приложение доступно в ${env.DEPLOY_DIR}"
-                }
-            }
+            echo "Развёртывание завершено: приложение доступно в C:/deploy/my_app"
         }
+    }
+}
 
         stage('Build complete') {
             steps {
