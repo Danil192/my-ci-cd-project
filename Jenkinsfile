@@ -13,7 +13,7 @@ pipeline {
             }
         }
 
-        stage('Fix checkout') {
+        stage('Fix checkout') {  
             steps {
                 bat "git checkout dev"
             }
